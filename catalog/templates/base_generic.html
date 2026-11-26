@@ -23,17 +23,34 @@
                 <li><a href="{% url 'index' %}">Home</a></li>
                 <li><a href="{% url 'books' %}">All books</a></li>
                 <li><a href="{% url 'authors' %}">All authors</a></li>
+                <li><a href="{% url 'genres' %}">All genres</a></li>
+                <li><a href="{% url 'languages' %}">All languages</a></li>
+                {% if perms.catalog.can_mark_returned %}
                 <li><a href="{% url 'borrowed' %}">All borrowed</a></li>
+                <li><a href="{% url 'bookinstances' %}">All book copies</a></li>
+                {% endif %}
             </ul>
             <ul class="sidebar-nav">
                 {% if user.is_authenticated %}
                 <li>User: {{ user.get_username }}</li>
                 <li><a href="{% url 'my-borrowed' %}">My borrowed</a></li>
                 {% if user.is_staff %}
-                <hr>
+                <li><hr></li>
                 <li>Staff</li>
                 {% if perms.catalog.add_author %}
                 <li><a href="{% url 'author-create' %}">Create author</a></li>
+                {% endif %}
+                {% if perms.catalog.add_book %}
+                <li><a href="{% url 'book-create' %}">Create book</a></li>
+                {% endif %}
+                {% if perms.catalog.add_bookinstance %}
+                <li><a href="{% url 'bookinstance-create' %}">Add book copy</a></li>
+                {% endif %}
+                {% if perms.catalog.add_genre %}
+                <li><a href="{% url 'genre-create' %}">Create genre</a></li>
+                {% endif %}
+                {% if perms.catalog.add_language %}
+                <li><a href="{% url 'language-create' %}">Create language</a></li>
                 {% endif %}
                 {% endif %}
                 <li>

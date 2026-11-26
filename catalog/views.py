@@ -1,36 +1,27 @@
-from django.shortcuts import render
-from .models import Book, Author, BookInstance, Genre
-from django.views import generic
-from django.contrib.auth.mixins import LoginRequiredMixin
 import datetime
-from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import get_object_or_404
+
+from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect
-from django.urls import reverse
-from .forms import RenewBookForm
+from django.urls import reverse, reverse_lazy
+from django.views import generic
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from django.urls import reverse_lazy
-from django.db.models import RestrictedError
-from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.contrib.auth.decorators import login_required, permission_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
-
-def book_detail_view(request, primary_key):
-    book = get_object_or_404(Book, pk=primary_key)
-    return render(request, 'catalog/book_detail.html', context={'book': book})
+from .models import Book, Author, BookInstance, Genre, Language
+from .forms import RenewBookForm
 
 
 def index(request):
     """View function for home page of site."""
-    # The 'all()' is implied by default.
-    num_authors = Author.objects.count()
-    num_visits = request.session.get('num_visits', -1)
+    num_visits = request.session.get('num_visits', 0)
     num_visits += 1
     request.session['num_visits'] = num_visits
-    # Generate counts of some of the main objects
+
     num_books = Book.objects.all().count()
     num_instances = BookInstance.objects.all().count()
-    # Available books
     num_instances_available = BookInstance.objects.filter(status__exact='a').count()
+    num_authors = Author.objects.count()
 
     context = {
         'num_books': num_books,
@@ -40,7 +31,6 @@ def index(request):
         'num_visits': num_visits,
     }
 
-    # Render the HTML template index.html with the data in the context variable
     return render(request, 'index.html', context=context)
 
 
@@ -49,9 +39,7 @@ class BookListView(generic.ListView):
     paginate_by = 5
 
     def get_context_data(self, **kwargs):
-        # Call the base implementation first to get the context
         context = super().get_context_data(**kwargs)
-        # Create any data and add it to the context
         context['some_data'] = 'This is just some data'
         return context
 
@@ -94,7 +82,6 @@ class AllBorrowedBooksListView(PermissionRequiredMixin, generic.ListView):
         return BookInstance.objects.filter(status__exact='o').order_by('due_back')
 
 
-
 @login_required
 @permission_required('catalog.can_mark_returned', raise_exception=True)
 def renew_book_librarian(request, pk):
@@ -109,7 +96,6 @@ def renew_book_librarian(request, pk):
 
         # Check if the form is valid:
         if form.is_valid():
-            # process the data in form.cleaned_data as required (here we just write it to the model due_back field)
             book_instance.due_back = form.cleaned_data['renewal_date']
             book_instance.save()
 
@@ -147,13 +133,70 @@ class AuthorDelete(PermissionRequiredMixin, DeleteView):
     success_url = reverse_lazy('authors')
     permission_required = 'catalog.delete_author'
 
-    def form_valid(self, form):
-        try:
-            self.object.delete()
-            return HttpResponseRedirect(self.success_url)
-        except RestrictedError:
-            return HttpResponseRedirect(
-                reverse("author-delete", kwargs={"pk": self.object.pk})
-            )
+
+class BookCreate(PermissionRequiredMixin, CreateView):
+    model = Book
+    fields = ['title', 'author', 'summary', 'isbn', 'genre', 'language']
+    permission_required = 'catalog.add_book'
 
 
+class BookUpdate(PermissionRequiredMixin, UpdateView):
+    model = Book
+    fields = '__all__'
+    permission_required = 'catalog.change_book'
+
+
+class BookDelete(PermissionRequiredMixin, DeleteView):
+    model = Book
+    success_url = reverse_lazy('books')
+    permission_required = 'catalog.delete_book'
+
+
+class BookInstanceCreate(PermissionRequiredMixin, CreateView):
+    model = BookInstance
+    fields = ['book', 'imprint', 'due_back', 'borrower', 'status']
+    permission_required = 'catalog.add_bookinstance'
+
+
+class BookInstanceUpdate(PermissionRequiredMixin, UpdateView):
+    model = BookInstance
+    fields = ['book', 'imprint', 'due_back', 'borrower', 'status']
+    permission_required = 'catalog.change_bookinstance'
+
+
+class BookInstanceDelete(PermissionRequiredMixin, DeleteView):
+    model = BookInstance
+    success_url = reverse_lazy('books')
+    permission_required = 'catalog.delete_bookinstance'
+
+
+class GenreListView(generic.ListView):
+    model = Genre
+    paginate_by = 10
+
+
+class LanguageListView(generic.ListView):
+    model = Language
+    paginate_by = 10
+
+
+class BookInstanceListView(PermissionRequiredMixin, generic.ListView):
+    """List of all book copies. Only for librarians."""
+    model = BookInstance
+    permission_required = 'catalog.can_mark_returned'
+    template_name = 'catalog/bookinstance_list_all.html'
+    paginate_by = 10
+
+
+class GenreCreate(PermissionRequiredMixin, CreateView):
+    model = Genre
+    fields = ['name']
+    permission_required = 'catalog.add_genre'
+    success_url = reverse_lazy('genres')
+
+
+class LanguageCreate(PermissionRequiredMixin, CreateView):
+    model = Language
+    fields = ['name']
+    permission_required = 'catalog.add_language'
+    success_url = reverse_lazy('languages')

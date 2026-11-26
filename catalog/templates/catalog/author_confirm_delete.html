@@ -8,17 +8,17 @@
 
 <p>You can't delete this author until all their books have been deleted:</p>
 <ul>
-  {% for book in author.book_set.all %}
+    {% for book in author.book_set.all %}
     <li><a href="{% url 'book-detail' book.pk %}">{{book}}</a> ({{ book.bookinstance_set.count }})</li>
-  {% endfor %}
+    {% endfor %}
 </ul>
 
 {% else %}
 <p>Are you sure you want to delete the author?</p>
 
 <form action="" method="POST">
-  {% csrf_token %}
-  <input type="submit" action="" value="Yes, delete.">
+    {% csrf_token %}
+    <input type="submit" action="" value="Yes, delete.">
 </form>
 {% endif %}
 
